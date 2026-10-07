@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>En Off · pistes de symbole</title>
+<style>
+  @font-face { font-family: "Big Shoulders"; src: url(fontes/big-shoulders-latin.woff2) format("woff2"); font-weight: 100 900; }
+  @font-face { font-family: "Figtree"; src: url(fontes/figtree-latin.woff2) format("woff2"); font-weight: 300 900; }
+  :root {
+    --page: #0d0908;
+    --nuit: #16110f; --creme: #f4ebe2; --ambre: #ffa630; --doux: #b5a598;
+    --jour: #efece8; --encre: #1c1512; --ambre-jour: #f28a00;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; width: 1600px; padding: 56px 30px 40px; background: var(--page); color: var(--creme); font-family: "Figtree", sans-serif; }
+  .titre { padding: 0 0 30px 10px; }
+  .titre h1 { margin: 0; font: 800 64px/1 "Big Shoulders", sans-serif; text-transform: uppercase; }
+  .titre p { margin: 12px 0 0; font-size: 20px; color: var(--doux); max-width: 1200px; }
+  section { padding: 10px; margin-bottom: 30px; }
+  section header { display: flex; align-items: baseline; gap: 18px; margin: 0 0 16px 4px; }
+  .lettre { display: inline-grid; place-items: center; width: 46px; height: 46px; border-radius: 999px; background: var(--ambre); color: #1a110a; font: 800 28px/1 "Big Shoulders", sans-serif; transform: translateY(-6px); }
+  h2 { margin: 0; font: 800 44px/1 "Big Shoulders", sans-serif; text-transform: uppercase; white-space: nowrap; }
+  header p { margin: 0; font-size: 19px; color: var(--doux); }
+  header p b { color: var(--creme); font-weight: 700; }
+  .grille { display: grid; grid-template-columns: 420px 1fr 1fr; grid-template-rows: 300px 230px; gap: 16px; }
+  .tuile { position: relative; display: grid; place-items: center; border-radius: 20px; overflow: hidden; }
+  .nuit { background: var(--nuit); }
+  .jour { background: var(--jour); }
+  .grand { grid-row: 1 / span 2; }
+  .etiquette { position: absolute; left: 20px; top: 16px; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  .nuit .etiquette { color: #806c5e; } .jour .etiquette { color: #8f8379; }
+  .bloc { display: flex; align-items: center; gap: 26px; }
+  .mot { font: 800 92px/1 "Figtree", sans-serif; letter-spacing: -0.045em; }
+  .nuit .mot { color: var(--creme); } .jour .mot { color: var(--encre); }
+  .icones { grid-column: 2 / span 2; display: flex; align-items: flex-end; justify-content: center; gap: 30px; padding-bottom: 28px; background: #2c2420; }
+  .icones figure { margin: 0; display: grid; justify-items: center; gap: 10px; }
+  .icones figcaption { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--doux); }
+  .sep { width: 1px; align-self: stretch; margin: 30px 6px; background: #3a2d27; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<div class="titre">
+  <h1>En Off · pistes de symbole</h1>
+  <p>Des symboles construits avec des formes simples, qui jouent sur le vide, à la manière des références de logggos.club. Le mot-logo est en Figtree, l'ambre reste le voyant.</p>
+</div>
+<main id="planche"></main>
+
+<script>
+/* Chaque symbole est dessiné dans une boîte de 100 × 100. `encre` et `voyant` sont injectés selon le fond. */
+const SYMBOLES = {
+  // D · La pause : le O d'En Off fendu en deux panneaux, comme le signe pause. Le voyant brille dans l'ouverture.
+  pause: (encre, voyant) => `
+    <path d="M44 10.65 A28 28 0 0 0 22 38 L22 62 A28 28 0 0 0 44 89.35 Z" fill="${encre}"/>
+    <path d="M56 10.65 A28 28 0 0 1 78 38 L78 62 A28 28 0 0 1 56 89.35 Z" fill="${encre}"/>
+    <circle cx="50" cy="50" r="4.2" fill="${voyant}"/>`,
+  // E · La bulle en croix : une bulle de parole en quatre panneaux ; le vide entre eux dessine une croix, un panneau s'allume.
+  bulle: (encre, voyant) => `
+    <path d="M8 26 A20 20 0 0 1 28 6 L46 6 L46 32 L8 32 Z" fill="${encre}"/>
+    <path d="M54 6 L72 6 A20 20 0 0 1 92 26 L92 32 L54 32 Z" fill="${voyant}"/>
+    <path d="M8 40 L46 40 L46 82 L42 82 L22 96 L30 82 L28 82 A20 20 0 0 1 8 62 Z" fill="${encre}"/>
+    <path d="M54 40 L92 40 L92 62 A20 20 0 0 1 72 82 L54 82 Z" fill="${encre}"/>`,
+  // F · EO : un E sans dos fait de trois barres de niveau, comme un vumètre, et le O allumé.
+  eo: (encre, voyant) => `
+    <rect x="8" y="18" width="38" height="14" rx="7" fill="${encre}"/>
+    <rect x="8" y="43" width="26" height="14" rx="7" fill="${encre}"/>
+    <rect x="8" y="68" width="38" height="14" rx="7" fill="${encre}"/>
+    <rect x="58" y="18" width="34" height="64" rx="17" fill="${voyant}"/>`,
+};
+
+const PISTES = [
+  { lettre: "D", nom: "La pause", cle: "pause",
+    idee: "Le O fendu en deux panneaux devient le signe <b>pause</b> : le micro est coupé. Dans l'ouverture, le voyant reste allumé. Inspiré du « a » d'Allegion, fait de panneaux et d'ouvertures." },
+  { lettre: "E", nom: "La bulle en croix", cle: "bulle",
+    idee: "Une bulle de parole en quatre panneaux. Le <b>vide entre eux dessine une croix</b>, discrète, pour « on y répond ensemble, Bible ouverte ». Un panneau s'allume : la question passe à l'antenne." },
+  { lettre: "F", nom: "EO", cle: "eo",
+    idee: "Un monogramme <b>E O</b> : le E sans dos est fait de trois barres de niveau, comme l'onde de chargement de l'appli, et le O est le voyant allumé. Géométrique et lisible jusqu'à 16 px." },
+];
+
+const sym = (cle, taille, encre, voyant) =>
+  `<svg viewBox="0 0 100 100" width="${taille}" height="${taille}">${SYMBOLES[cle](encre, voyant)}</svg>`;
+
+function icone(cle, T, fond, encre, voyant, marge = 0.2) {
+  const s = T * (1 - 2 * marge);
+  return `<svg viewBox="0 0 ${T} ${T}" width="${T}" height="${T}">
+    <rect width="${T}" height="${T}" rx="${T * 0.225}" fill="${fond}"/>
+    <g transform="translate(${T * marge} ${T * marge}) scale(${s / 100})">${SYMBOLES[cle](encre, voyant)}</g></svg>`;
+}
+
+document.getElementById("planche").innerHTML = PISTES.map((p) => `
+  <section id="piste-${p.lettre}">
+    <header><span class="lettre">${p.lettre}</span><h2>${p.nom}</h2><p>${p.idee}</p></header>
+    <div class="grille">
+      <div class="tuile nuit grand"><span class="etiquette">Symbole</span>${sym(p.cle, 300, "#f4ebe2", "#ffa630")}</div>
+      <div class="tuile nuit"><span class="etiquette">Thème sombre</span><div class="bloc">${sym(p.cle, 104, "#f4ebe2", "#ffa630")}<span class="mot">en off</span></div></div>
+      <div class="tuile jour"><span class="etiquette">Thème clair</span><div class="bloc">${sym(p.cle, 104, "#1c1512", "#f28a00")}<span class="mot">en off</span></div></div>
+      <div class="tuile icones">
+        ${[168, 96, 60].map((t, i) => `<figure>${icone(p.cle, t, "#16110f", "#f4ebe2", "#ffa630")}<figcaption>${i === 0 ? "Icône sombre" : t + " px"}</figcaption></figure>`).join("")}
+        <div class="sep"></div>
+        <figure>${icone(p.cle, 168, "#ffa630", "#1a110a", "#f4ebe2")}<figcaption>Icône voyant</figcaption></figure>
+        <div class="sep"></div>
+        ${[32, 16].map((t) => `<figure>${icone(p.cle, t, "#16110f", "#f4ebe2", "#ffa630", 0.14)}<figcaption>${t} px</figcaption></figure>`).join("")}
+      </div>
+    </div>
+  </section>`).join("");
+
+document.fonts.load('800 50px "Figtree"').then(() => document.fonts.load('800 50px "Big Shoulders"')).then(() => { document.body.dataset.pret = "1"; });
+</script>
+</body>
+</html>
