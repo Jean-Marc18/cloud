@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MLR En Off · pistes de logo</title>
+<style>
+  @font-face {
+    font-family: "Big Shoulders";
+    src: url(fontes/big-shoulders-latin.woff2) format("woff2");
+    font-weight: 100 900;
+  }
+  @font-face {
+    font-family: "Figtree";
+    src: url(fontes/figtree-latin.woff2) format("woff2");
+    font-weight: 300 900;
+  }
+  :root {
+    --page: #0d0908;
+    --nuit: #16110f;
+    --jour: #efece8;
+    --texte: #f4ebe2;
+    --doux: #b5a598;
+    --voyant: #ffa630;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    width: 1600px;
+    padding: 56px 30px 40px;
+    background: var(--page);
+    color: var(--texte);
+    font-family: "Figtree", sans-serif;
+  }
+  .titre { padding: 0 0 36px 10px; }
+  .titre h1 {
+    margin: 0;
+    font: 800 64px/1 "Big Shoulders", sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+  .titre p { margin: 12px 0 0; font-size: 20px; color: var(--doux); }
+  section { padding: 10px; margin-bottom: 34px; }
+  section header { display: flex; align-items: baseline; gap: 18px; margin: 0 0 18px 4px; }
+  .lettre {
+    display: inline-grid;
+    place-items: center;
+    width: 46px; height: 46px;
+    border-radius: 999px;
+    background: var(--voyant);
+    color: #1a110a;
+    font: 800 28px/1 "Big Shoulders", sans-serif;
+    transform: translateY(-6px);
+  }
+  section h2 { margin: 0; font: 800 44px/1 "Big Shoulders", sans-serif; text-transform: uppercase; }
+  section header p { margin: 0; font-size: 19px; color: var(--doux); max-width: 1100px; }
+  .grille { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tuile {
+    position: relative;
+    display: grid;
+    place-items: center;
+    height: 360px;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .tuile.nuit { background: var(--nuit); }
+  .tuile.jour { background: var(--jour); }
+  .tuile.icones {
+    grid-column: 1 / -1;
+    height: 250px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: none;
+    gap: 16px;
+  }
+  .bande { display: flex; align-items: flex-end; justify-content: center; gap: 34px; height: 100%; width: 100%; border-radius: 20px; padding-bottom: 34px; }
+  .bande.nuit { background: #2c2420; }
+  .bande.jour { background: var(--jour); }
+  .bande figure { margin: 0; display: grid; justify-items: center; gap: 12px; }
+  .bande figcaption { font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .bande.nuit figcaption { color: var(--doux); }
+  .bande.jour figcaption { color: #5f544c; }
+  .etiquette {
+    position: absolute; left: 22px; top: 18px;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .nuit .etiquette { color: #806c5e; }
+  .jour .etiquette { color: #8f8379; }
+  svg { display: block; overflow: visible; }
+</style>
+</head>
+<body>
+  <div class="titre">
+    <h1>MLR En Off · pistes de logo</h1>
+    <p>Trois directions, dessinées avec Big Shoulders, Figtree et les couleurs du design system « Hors antenne ».</p>
+  </div>
+  <main id="planche"></main>
+
+<script>
+/*
+ * Chaque marque est un SVG calculé à partir des métriques réelles de Big Shoulders
+ * (mesurées au canvas une fois la police chargée), pour que le voyant prenne
+ * exactement la place et la hauteur de la lettre qu'il remplace.
+ */
+const THEMES = {
+  nuit: { fond: "#16110f", texte: "#f4ebe2", doux: "#b5a598", voyant: "#ffa630", surVoyant: "#1a110a", lueur: true },
+  jour: { fond: "#efece8", texte: "#1c1512", doux: "#5f544c", voyant: "#f28a00", surVoyant: "#1a110a", lueur: false },
+};
+const BS = (s) => `800 ${s}px "Big Shoulders"`;
+const FIG = (s) => `700 ${s}px "Figtree"`;
+let uid = 0;
+
+function mesurer() {
+  const ctx = document.createElement("canvas").getContext("2d");
+  const m = (t, f) => { ctx.font = f; return ctx.measureText(t); };
+  const F = 1000;
+  const o = m("O", BS(F));
+  const met = {
+    capH: m("E", BS(F)).actualBoundingBoxAscent / F,
+    figCap: m("M", FIG(F)).actualBoundingBoxAscent / F,
+    w: (t) => m(t, BS(F)).width / F,
+    encre: (t) => { const r = m(t, BS(F)); return { g: -r.actualBoundingBoxLeft / F, d: r.actualBoundingBoxRight / F }; },
+    wFig: (t, esp) => (m(t, FIG(F)).width + esp * F * t.length) / F,
+    O: {
+      avance: o.width / F,
+      g: -o.actualBoundingBoxLeft / F,
+      d: o.actualBoundingBoxRight / F,
+      haut: o.actualBoundingBoxAscent / F,
+      bas: o.actualBoundingBoxDescent / F,
+    },
+  };
+  met.Q = scannerPointInterrogation();
+  return met;
+}
+
+// Trouve, au pixel près, le crochet et le point du « ? » pour remplacer le point par un voyant rond.
+function scannerPointInterrogation() {
+  const F = 1000, cv = document.createElement("canvas");
+  cv.width = 1000; cv.height = 1500;
+  const g = cv.getContext("2d");
+  const bx = 250, by = 1250;
+  g.font = BS(F); g.fillStyle = "#000"; g.fillText("?", bx, by);
+  const d = g.getImageData(0, 0, cv.width, cv.height).data;
+  const ligne = (y) => {
+    let a = Infinity, b = -Infinity;
+    for (let x = 0; x < cv.width; x++) if (d[(y * cv.width + x) * 4 + 3] > 127) { a = Math.min(a, x); b = Math.max(b, x); }
+    return a === Infinity ? null : [a, b];
+  };
+  let y = cv.height - 1;
+  while (y > 0 && !ligne(y)) y--;
+  const basPoint = y;
+  let gp = Infinity, dp = -Infinity;
+  while (y > 0 && ligne(y)) { const [a, b] = ligne(y); gp = Math.min(gp, a); dp = Math.max(dp, b); y--; }
+  const hautPoint = y + 1;
+  while (y > 0 && !ligne(y)) y--;
+  const basCrochet = y;
+  let gc = Infinity, dc = -Infinity;
+  while (y > 0 && ligne(y)) { const [a, b] = ligne(y); gc = Math.min(gc, a); dc = Math.max(dc, b); y--; }
+  const hautCrochet = y + 1;
+  const r = (v) => v / F;
+  return {
+    point: { cx: r((gp + dp) / 2 - bx), cy: r((hautPoint + basPoint) / 2 - by), w: r(dp - gp), h: r(basPoint - hautPoint) },
+    coupe: r((basCrochet + hautPoint) / 2 - by),
+    encre: { g: r(Math.min(gc, gp) - bx), d: r(Math.max(dc, dp) - bx), haut: r(hautCrochet - by), bas: r(basPoint - by) },
+  };
+}
+
+function svg(w, h, contenu, { pad = 0, echelle = 1 } = {}) {
+  const vb = `${-pad} ${-pad} ${w + 2 * pad} ${h + 2 * pad}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${(w + 2 * pad) * echelle}" height="${(h + 2 * pad) * echelle}">${contenu}</svg>`;
+}
+
+function lueur(id, ecart) {
+  return `<filter id="${id}" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="${ecart}"/></filter>`;
+}
+
+// Le « O » de OFF remplacé par un voyant en pilule : même encre, même hauteur, mêmes approches.
+function motEnOff(met, F, th, x0, base, { voyantAllume = true } = {}) {
+  const O = met.O;
+  const xO = x0 + (met.w("EN") + met.w(" ")) * F;
+  const px = xO + O.g * F, pw = (O.d - O.g) * F;
+  const py = base - O.haut * F, ph = (O.haut + O.bas) * F;
+  let s = `<text x="${x0}" y="${base}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${th.texte}">EN</text>`;
+  if (voyantAllume) {
+    if (th.lueur) {
+      const id = `l${uid++}`;
+      s += `<defs>${lueur(id, pw * 0.45)}</defs><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="${pw / 2}" fill="${th.voyant}" opacity="0.55" filter="url(#${id})"/>`;
+    }
+    s += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="${pw / 2}" fill="${th.voyant}"/>`;
+    s += `<text x="${xO + O.avance * F}" y="${base}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${th.texte}">FF</text>`;
+  } else {
+    s += `<text x="${xO}" y="${base}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${th.texte}">OFF</text>`;
+  }
+  const largeur = (met.w("EN") + met.w(" ") + O.avance) * F + met.encre("FF").d * F;
+  return { s, largeur };
+}
+
+function petitMLR(met, F, th, x, base) {
+  const esp = 0.32;
+  return `<text x="${x}" y="${base}" font-family="Figtree" font-weight="700" font-size="${F}" letter-spacing="${esp * F}" fill="${th.doux}">MLR</text>`;
+}
+
+/* ---------- A · Le voyant ---------- */
+function marqueA(met, F, th) {
+  const fm = 0.19 * F;
+  const baseMLR = met.figCap * fm;
+  const base = baseMLR + 0.13 * F + met.capH * F;
+  const mot = motEnOff(met, F, th, 0, base);
+  return svg(mot.largeur, base + met.O.bas * F, petitMLR(met, fm, th, 0, baseMLR) + mot.s, { pad: F * 0.05 });
+}
+
+/* ---------- B · L'enseigne ---------- */
+function marqueB(met, F, th) {
+  const cap = met.capH * F;
+  const px = 0.3 * F, py = 0.24 * F;
+  const wMLR = met.encre("MLR").d * F;
+  const ecart = 0.26 * F;
+  const wTexte = met.encre("EN OFF").d * F;
+  const hE = cap + 2 * py, wE = wTexte + 2 * px;
+  const xE = wMLR + ecart, base = py + cap;
+  const rx = hE * 0.2;
+  let s = "";
+  if (th.lueur) {
+    const id = `l${uid++}`;
+    s += `<defs>${lueur(id, F * 0.16)}</defs><rect x="${xE}" y="0" width="${wE}" height="${hE}" rx="${rx}" fill="${th.voyant}" opacity="0.35" filter="url(#${id})"/>`;
+  }
+  s += `<text x="0" y="${base}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${th.texte}">MLR</text>`;
+  s += `<rect x="${xE}" y="0" width="${wE}" height="${hE}" rx="${rx}" fill="${th.voyant}"/>`;
+  const i = 0.075 * F;
+  s += `<rect x="${xE + i}" y="${i}" width="${wE - 2 * i}" height="${hE - 2 * i}" rx="${rx - i}" fill="none" stroke="${th.surVoyant}" stroke-opacity="0.22" stroke-width="${0.018 * F}"/>`;
+  s += `<text x="${xE + px}" y="${base}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${th.surVoyant}">EN OFF</text>`;
+  return svg(xE + wE, hE, s, { pad: F * 0.08 });
+}
+
+/* ---------- C · La bulle ---------- */
+// Une bulle de parole, un « ? » dont le point est le voyant : la question qui passe à l'antenne.
+function bulle(met, S, th, { trait = 0.075, couleurTrait } = {}) {
+  const u = S / 100, sw = trait * S;
+  const c = couleurTrait || th.texte;
+  const d = `M 30 8 H 70 A 22 22 0 0 1 92 30 V 56 A 22 22 0 0 1 70 78 H 47 L 27 94 L 30 78 A 22 22 0 0 1 8 56 V 30 A 22 22 0 0 1 30 8 Z`;
+  let s = `<path d="${d}" transform="scale(${u})" fill="none" stroke="${c}" stroke-width="${sw / u}" stroke-linejoin="round"/>`;
+  const Q = met.Q;
+  const hautQ = 47 * u;
+  const fq = hautQ / (Q.encre.bas - Q.encre.haut);
+  const qx = 50 * u - ((Q.encre.g + Q.encre.d) / 2) * fq;
+  const qy = 43 * u - ((Q.encre.haut + Q.encre.bas) / 2) * fq;
+  const id = `c${uid++}`;
+  s += `<defs><clipPath id="${id}"><rect x="${qx - S}" y="${qy - 2 * S}" width="${3 * S}" height="${2 * S + Q.coupe * fq}"/></clipPath></defs>`;
+  s += `<text x="${qx}" y="${qy}" font-family="Big Shoulders" font-weight="800" font-size="${fq}" fill="${c}" clip-path="url(#${id})">?</text>`;
+  const cx = qx + Q.point.cx * fq, cy = qy + Q.point.cy * fq;
+  const r = Math.max(Q.point.w, Q.point.h) * fq * 0.58;
+  if (th.lueur) {
+    const idl = `l${uid++}`;
+    s += `<defs>${lueur(idl, r * 0.9)}</defs><circle cx="${cx}" cy="${cy}" r="${r}" fill="${th.voyant}" opacity="0.6" filter="url(#${idl})"/>`;
+  }
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${th.voyant}"/>`;
+  return s;
+}
+
+function marqueC(met, F, th) {
+  const fm = 0.19 * F;
+  const baseMLR = met.figCap * fm;
+  const base = baseMLR + 0.13 * F + met.capH * F;
+  const hBloc = base;
+  const S = hBloc * 1.32;
+  const ecart = 0.3 * F;
+  const dy = (hBloc - S * 0.86) / 2;
+  let s = `<g transform="translate(0 ${dy})">${bulle(met, S, th)}</g>`;
+  const x0 = S + ecart;
+  s += petitMLR(met, fm, th, x0, baseMLR);
+  const mot = motEnOff(met, F, th, x0, base, { voyantAllume: false });
+  s += mot.s;
+  return svg(x0 + mot.largeur, Math.max(base + met.O.bas * F, S * 0.94 + dy), s, { pad: F * 0.05 });
+}
+
+/* ---------- Icônes d'application ---------- */
+function fondIcone(T, couleur) {
+  return `<rect width="${T}" height="${T}" rx="${T * 0.225}" fill="${couleur}"/>`;
+}
+
+function empilement(met, T, th, couleurTexte, avecVoyant) {
+  // « EN » au-dessus de « OFF », calé à gauche, sur 66 % de la largeur.
+  const F = (T * 0.62) / (met.O.avance + met.encre("FF").d);
+  const cap = met.capH * F, inter = cap * 0.16;
+  const hBloc = 2 * cap + inter;
+  const x0 = T * 0.19, b1 = (T - hBloc) / 2 + cap, b2 = b1 + inter + cap;
+  const t = (x, y, txt) => `<text x="${x}" y="${y}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${couleurTexte}">${txt}</text>`;
+  let s = t(x0, b1, "EN");
+  const O = met.O;
+  const px = x0 + O.g * F, pw = (O.d - O.g) * F, py = b2 - O.haut * F, ph = (O.haut + O.bas) * F;
+  if (avecVoyant) {
+    if (th.lueur) {
+      const id = `l${uid++}`;
+      s += `<defs>${lueur(id, pw * 0.45)}</defs><rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="${pw / 2}" fill="${th.voyant}" opacity="0.6" filter="url(#${id})"/>`;
+    }
+    s += `<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="${pw / 2}" fill="${th.voyant}"/>`;
+    s += t(x0 + O.avance * F, b2, "FF");
+  } else {
+    s += t(x0, b2, "OFF");
+  }
+  return s;
+}
+
+function iconeA(met, T, th, petite) {
+  let s = fondIcone(T, THEMES.nuit.fond);
+  if (petite) {
+    const pw = T * 0.36, ph = T * 0.68;
+    const id = `l${uid++}`;
+    s += `<defs>${lueur(id, pw * 0.4)}</defs><rect x="${(T - pw) / 2}" y="${(T - ph) / 2}" width="${pw}" height="${ph}" rx="${pw / 2}" fill="${THEMES.nuit.voyant}" opacity="0.6" filter="url(#${id})"/>`;
+    s += `<rect x="${(T - pw) / 2}" y="${(T - ph) / 2}" width="${pw}" height="${ph}" rx="${pw / 2}" fill="${THEMES.nuit.voyant}"/>`;
+  } else {
+    s += empilement(met, T, THEMES.nuit, THEMES.nuit.texte, true);
+  }
+  return svg(T, T, s);
+}
+
+function iconeB(met, T, th, petite) {
+  let s = fondIcone(T, THEMES.nuit.voyant);
+  const i = T * 0.06;
+  if (petite) {
+    const F = (T * 0.84) / met.encre("OFF").d;
+    const cap = met.capH * F;
+    const x = (T - met.encre("OFF").d * F) / 2;
+    s += `<text x="${x}" y="${(T + cap) / 2}" font-family="Big Shoulders" font-weight="800" font-size="${F}" fill="${THEMES.nuit.surVoyant}">OFF</text>`;
+  } else {
+    s += `<rect x="${i}" y="${i}" width="${T - 2 * i}" height="${T - 2 * i}" rx="${T * 0.225 - i}" fill="none" stroke="${THEMES.nuit.surVoyant}" stroke-opacity="0.22" stroke-width="${T * 0.012}"/>`;
+    s += empilement(met, T, THEMES.nuit, THEMES.nuit.surVoyant, false);
+  }
+  return svg(T, T, s);
+}
+
+function iconeC(met, T, th, petite) {
+  let s = fondIcone(T, THEMES.nuit.fond);
+  const S = T * (petite ? 0.92 : 0.74);
+  s += `<g transform="translate(${(T - S) / 2} ${(T - S * 0.96) / 2 + S * 0.02})">${bulle(met, S, THEMES.nuit, { trait: petite ? 0.1 : 0.075 })}</g>`;
+  return svg(T, T, s);
+}
+
+/* ---------- Planche ---------- */
+const PISTES = [
+  {
+    lettre: "A", nom: "Le voyant", marque: marqueA, icone: iconeA,
+    idee: "Le O de OFF devient le voyant ambré, la signature du design system : il s'allume quand une parole passe à l'antenne. Sobre, typographique, et réduit au seul voyant pour le favicon.",
+  },
+  {
+    lettre: "B", nom: "L'enseigne", marque: marqueB, icone: iconeB,
+    idee: "« EN OFF » dans un caisson lumineux ambré, comme le panneau ON AIR d'un studio, mais à l'envers. La plus forte en affiche et en icône, et identique dans les deux thèmes.",
+  },
+  {
+    lettre: "C", nom: "La bulle", marque: marqueC, icone: iconeC,
+    idee: "Une bulle de parole et un « ? » dont le point est le voyant : la question anonyme qui passe à l'antenne. La plus explicite sur ce que fait l'appli.",
+  },
+];
+
+function construire() {
+  const met = mesurer();
+  const F = { A: 190, B: 118, C: 150 };
+  const tailles = [168, 112, 72, 48];
+  const favicons = [32, 16];
+  document.getElementById("planche").innerHTML = PISTES.map((p) => {
+    const bande = (theme) => `
+      <div class="bande ${theme}">
+        ${tailles.map((t, k) => `<figure>${p.icone(met, t, THEMES[theme], false)}<figcaption>${k === 0 ? "Icône d'appli" : t + " px"}</figcaption></figure>`).join("")}
+        ${favicons.map((t) => `<figure>${p.icone(met, t, THEMES[theme], true)}<figcaption>${t} px</figcaption></figure>`).join("")}
+      </div>`;
+    return `
+    <section id="piste-${p.lettre}">
+      <header><span class="lettre">${p.lettre}</span><h2>${p.nom}</h2><p>${p.idee}</p></header>
+      <div class="grille">
+        <div class="tuile nuit"><span class="etiquette">Thème sombre</span>${p.marque(met, F[p.lettre], THEMES.nuit)}</div>
+        <div class="tuile jour"><span class="etiquette">Thème clair</span>${p.marque(met, F[p.lettre], THEMES.jour)}</div>
+        <div class="tuile icones">${bande("nuit")}${bande("jour")}</div>
+      </div>
+    </section>`;
+  }).join("");
+  document.body.dataset.pret = "1";
+}
+
+document.fonts.load(BS(100)).then(() => document.fonts.load(FIG(100))).then(construire);
+</script>
+</body>
+</html>
